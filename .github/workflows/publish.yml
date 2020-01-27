@@ -1,0 +1,30 @@
+name: Build & publish drill artifacts
+on:
+  push:
+    branches:
+      - master
+
+jobs:
+  build_and_publish_for_macos:
+    name: Publish for macOS platform
+    runs-on: macOS-latest
+    steps:
+      - uses: actions/checkout@v1
+      - name: Publish
+        run: |
+          gradle -si publish
+        env:
+          BINTRAY_USER: ${{ secrets.BINTRAY_USER }}
+          BINTRAY_API_KEY: ${{ secrets.BINTRAY_API_KEY }}
+
+  build_and_publish_for_win:
+    name: Publish for Windows platform (Windows platform)
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v1
+      - name: Publish
+        run: |
+          gradle publishMingwX64PublicationToMavenRepository
+        env:
+          BINTRAY_USER: ${{ secrets.BINTRAY_USER }}
+          BINTRAY_API_KEY: ${{ secrets.BINTRAY_API_KEY }}

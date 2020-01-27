@@ -1,0 +1,46 @@
+package = com.epam.drill.internal.socket
+compilerOpts.mingw_x64 = -DMINGW
+---
+
+#include <limits.h>
+
+#ifdef MINGW
+#include <winsock2.h>
+#include <fcntl.h>
+#include <errno.h>
+
+static inline int socket_get_error() {
+    int rc = WSAGetLastError();
+    if (rc == WSAEWOULDBLOCK) return EAGAIN;
+    if (rc == WSAEINPROGRESS) return EINPROGRESS;
+    if (rc == WSAEISCONN || rc == WSAEALREADY) return EISCONN;
+    else return rc;
+}
+
+static inline void setup_buffer_size(SOCKET socket) {
+   int new_size = 1024000;
+   setsockopt(socket, SOL_SOCKET, SO_RCVBUF , &new_size, sizeof(new_size));
+   setsockopt(socket, SOL_SOCKET, SO_SNDBUF , &new_size, sizeof(new_size));
+}
+
+#else
+
+#include <errno.h>
+#include <sys/socket.h>
+#include <fcntl.h>
+#include <netinet/in.h>
+#include <netinet/ip.h>
+#include <netinet/tcp.h>
+#include <unistd.h>
+
+static inline int socket_get_error() {
+    return errno;
+}
+
+static inline void setup_buffer_size(int socket) {
+   int new_size = 1024000;
+   setsockopt(socket, SOL_SOCKET, SO_RCVBUF , &new_size, sizeof(new_size));
+   setsockopt(socket, SOL_SOCKET, SO_SNDBUF , &new_size, sizeof(new_size));
+}
+
+#endif
