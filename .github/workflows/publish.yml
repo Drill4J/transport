@@ -16,6 +16,20 @@ jobs:
         env:
           BINTRAY_USER: ${{ secrets.BINTRAY_USER }}
           BINTRAY_API_KEY: ${{ secrets.BINTRAY_API_KEY }}
+          GRADLE_OPTS: -Dorg.gradle.daemon=false -Dorg.gradle.jvmargs=-Xmx1024m
+
+
+  build_and_publish_for_linux:
+    name: Publish for Linux platform
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v1
+      - name: Publish
+        run: |
+          gradle -si publishLinuxX64PublicationToMavenRepository
+        env:
+          BINTRAY_USER: ${{ secrets.BINTRAY_USER }}
+          BINTRAY_API_KEY: ${{ secrets.BINTRAY_API_KEY }}
 
   build_and_publish_for_win:
     name: Publish for Windows platform (Windows platform)
