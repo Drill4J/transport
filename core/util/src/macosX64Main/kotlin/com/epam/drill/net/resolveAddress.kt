@@ -72,7 +72,10 @@ fun setSocketNonBlocking(sockRaw: ULong) {
     fcntl(sockRaw.toInt(), F_SETFL, flags)
 }
 
-fun isAllowedSocketError() = socket_get_error() == EAGAIN || socket_get_error() == 316
+fun isAllowedSocketError(): Boolean {
+    val socketError = socket_get_error()
+    return socketError == EAGAIN || socketError == 316 || socketError == 0
+}
 
 fun checkErrors(name: String) {
     val error = socket_get_error()
