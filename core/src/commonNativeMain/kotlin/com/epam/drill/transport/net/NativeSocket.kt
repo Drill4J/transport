@@ -10,7 +10,7 @@ import kotlinx.cinterop.refTo
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
-import kotlinx.io.internal.utils.KX_SOCKET
+import io.ktor.utils.io.internal.utils.KX_SOCKET
 import platform.posix.EAGAIN
 import platform.posix.init_sockets
 import platform.posix.recv

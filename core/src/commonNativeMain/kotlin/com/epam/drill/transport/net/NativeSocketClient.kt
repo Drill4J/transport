@@ -2,7 +2,7 @@ package com.epam.drill.transport.net
 
 import kotlinx.cinterop.convert
 import kotlinx.cinterop.memScoped
-import kotlinx.io.internal.utils.KX_SOCKET
+import io.ktor.utils.io.internal.utils.KX_SOCKET
 import platform.posix.*
 
 class NativeSocketClient(sockfd: KX_SOCKET) : NativeSocket(sockfd) {

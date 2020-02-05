@@ -1,6 +1,6 @@
 package com.epam.drill.transport.net
 
-import kotlinx.io.internal.utils.KX_SOCKET
+import io.ktor.utils.io.internal.utils.KX_SOCKET
 
 class NativeSocketServer(val sockfds: KX_SOCKET) : NativeSocket(sockfds) {
 
