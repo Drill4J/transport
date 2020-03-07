@@ -1,38 +1,34 @@
-import org.jetbrains.kotlin.gradle.plugin.*
-import org.jetbrains.kotlin.gradle.tasks.*
-
 plugins {
-    id("kotlin-multiplatform")
+    id("org.jetbrains.kotlin.multiplatform") version ("1.3.70")
+    id("com.epam.drill.cross-compilation") version "0.15.1"
+}
+
+val ktorLibsVersion: String by extra
+val coroutinesVersion: String by extra
+
+repositories {
+    mavenLocal()
+    mavenCentral()
+    jcenter()
 }
 
 kotlin {
 
     targets {
-        if (isDevMode) {
-            currentTarget("commonNative")
-        } else {
-            mingwX64()
-            linuxX64()
-            macosX64()
-        }
-    }
-
-    sourceSets {
-
-        val commonNativeMain: KotlinSourceSet = maybeCreate("commonNativeMain")
-        with(commonNativeMain) {
-            dependencies {
-                implementation("io.ktor:ktor-io:$ktorLibsVersion")
-                implementation("io.ktor:ktor-utils-native:$ktorLibsVersion")
-                implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core-native:$coroutinesVersion")
-                implementation(project(":core:util"))
+        crossCompilation {
+            common {
+                dependencies {
+                    implementation("io.ktor:ktor-io:$ktorLibsVersion")
+                    implementation("io.ktor:ktor-utils-native:$ktorLibsVersion")
+                    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core-native:$coroutinesVersion")
+                    implementation(project(":core:util"))
+                }
             }
         }
-        if (!isDevMode) {
-            @Suppress("UNUSED_VARIABLE") val mingwX64Main by getting { dependsOn(commonNativeMain) }
-            @Suppress("UNUSED_VARIABLE") val linuxX64Main by getting { dependsOn(commonNativeMain) }
-            @Suppress("UNUSED_VARIABLE") val macosX64Main by getting { dependsOn(commonNativeMain) }
-        }
-
+        mingwX64()
+        linuxX64()
+        macosX64()
     }
+
+
 }
