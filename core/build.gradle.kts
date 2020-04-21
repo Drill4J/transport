@@ -1,17 +1,12 @@
 plugins {
-    id("org.jetbrains.kotlin.multiplatform") version ("1.3.70")
-    id("com.epam.drill.cross-compilation") version "0.16.0"
+    kotlin("multiplatform")
+    id("com.epam.drill.cross-compilation")
+    `maven-publish`
 }
 
 val ktorLibsVersion: String by extra
 val coroutinesVersion: String by extra
-
-repositories {
-    mavenLocal()
-    mavenCentral()
-    jcenter()
-    maven(url = "https://oss.jfrog.org/artifactory/list/oss-release-local")
-}
+val drillLoggerVersion: String by extra
 
 kotlin {
 
@@ -22,6 +17,7 @@ kotlin {
                     implementation("io.ktor:ktor-io:$ktorLibsVersion")
                     implementation("io.ktor:ktor-utils-native:$ktorLibsVersion")
                     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core-native:$coroutinesVersion")
+                    implementation("com.epam.drill.logger:logger:$drillLoggerVersion")
                 }
             }
         }
@@ -31,5 +27,4 @@ kotlin {
     }
     targets.filterIsInstance<org.jetbrains.kotlin.gradle.plugin.mpp.KotlinNativeTarget>()
         .forEach { it.compilations.forEach { it.cinterops?.create("sockets") } }
-
 }
