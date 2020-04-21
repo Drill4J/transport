@@ -1,17 +1,18 @@
 package com.epam.drill.transport.ws
 
-import com.epam.drill.transport.common.ws.URL
-import com.epam.drill.transport.lang.toByteArray
-import com.epam.drill.transport.net.AsyncClient
-import com.epam.drill.transport.stream.readLine
-import com.epam.drill.transport.stream.writeBytes
-import com.epam.drill.util.encoding.toBase64
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
-import kotlin.coroutines.CoroutineContext
-import kotlin.coroutines.coroutineContext
+import com.epam.drill.transport.common.ws.*
+import com.epam.drill.transport.lang.*
+import com.epam.drill.transport.net.*
+import com.epam.drill.transport.stream.*
+import com.epam.drill.util.encoding.*
+import kotlinx.atomicfu.*
+import kotlinx.coroutines.*
+import mu.*
+import kotlin.coroutines.*
+import kotlin.native.concurrent.*
 
+@SharedImmutable
+private val logger = KotlinLogging.logger("RawSocketWebSocketClient")
 
 suspend fun RWebsocketClient(
     url: String,
@@ -56,7 +57,15 @@ class RawSocketWebSocketClient(
     val port = url.port
     val path = url.path
 
+    var closed: Boolean
+        get() = _closed.value
+        private set(value) = _closed.update { value }
+
+    private val _closed = atomic(false)
+    private val _ping = atomic(true)
+
     internal suspend fun connect() {
+        logger.debug { "connecting..." }
         val data = (buildList<String> {
             add(
                 "GET ${if (path.isEmpty()) {
@@ -84,11 +93,9 @@ class RawSocketWebSocketClient(
         }.joinToString("\r\n") + "\r\n\n").toByteArray()
         client.writeBytes(data)
         // Read response
-        val headers = arrayListOf<String>()
         while (true) {
             val line = client.readLine().trimEnd()
             if (line.isEmpty()) {
-                headers += line
                 break
             }
         }
@@ -97,27 +104,32 @@ class RawSocketWebSocketClient(
             onOpen(Unit)
             try {
                 launch {
+                    val pingFrame = WsFrame(data = ByteArray(0), type = WsOpcode.Ping)
+                    _ping.value = true
                     try {
-                        while (!closed) {
-                            client.sendWsFrame(
-                                WsFrame(
-                                    "".toByteArray(),
-                                    WsOpcode.Ping
-                                )
-                            )
-                            delay(3000)
+                        while (_ping.value) {
+                            client.sendWsFrame(pingFrame)
+                            _ping.value = false
+                            withTimeout(5000L ) {
+                                while (!_ping.value) {
+                                    delay(500L)
+                                }
+                            }
                         }
-                    } catch (ignored: Throwable) {
-                        client.disconnect()
+                    } catch (e: Throwable) {
                     }
-
+                    if (!closed) {
+                        logger.warn { "ping timeout!" }
+                    }
+                    logger.info { "disconnecting client" }
+                    client.disconnect()
+                    logger.info { "client disconnected" }
                 }
 
                 loop@ while (!closed) {
                     val frame = client.readWsFrame()
                     @Suppress("IMPLICIT_CAST_TO_ANY") val payload =
                         if (frame.frameIsBinary) frame.data else frame.data.decodeToString()
-
 
                     when (frame.type) {
                         WsOpcode.Close -> {
@@ -132,8 +144,7 @@ class RawSocketWebSocketClient(
                             )
                         }
                         WsOpcode.Pong -> {
-                            //todo
-                            lastPong = 100
+                            _ping.value = true
                         }
                         else -> {
                             when (payload) {
@@ -148,16 +159,12 @@ class RawSocketWebSocketClient(
                 onError(e)
             }
             onClose(Unit)
-
+            logger.debug { "socket closed" }
         }
-
     }
 
-    private var lastPong: Long = 0
-
-    var closed = false
-
     override fun close(code: Int, reason: String) {
+        logger.debug { "closing socket: code=$code, reason=$reason" }
         closed = true
         launch {
             client.sendWsFrame(
