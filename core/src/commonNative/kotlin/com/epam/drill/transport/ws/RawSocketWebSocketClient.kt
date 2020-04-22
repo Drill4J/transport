@@ -107,35 +107,42 @@ class RawSocketWebSocketClient(
                     val pingFrame = WsFrame(data = ByteArray(0), type = WsOpcode.Ping)
                     _ping.value = true
                     try {
-                        while (_ping.value) {
-                            client.sendWsFrame(pingFrame)
-                            _ping.value = false
-                            withTimeout(5000L ) {
-                                while (!_ping.value) {
-                                    delay(500L)
+                        while (!closed) {
+                            if (_ping.value) {
+                                logger.debug { "ping>" }
+                                client.sendWsFrame(pingFrame)
+                                withTimeout(7000L ) {
+                                    while (_ping.value) {
+                                        delay(500L)
+                                    }
                                 }
+                            } else {
+                                _ping.value = true
+                                delay(3000L)
                             }
                         }
                     } catch (e: Throwable) {
+                        logger.error(e) { "ping timeout!" }
+                        logger.info { "disconnecting client" }
+                        client.disconnect()
+                        logger.info { "client disconnected" }
                     }
-                    if (!closed) {
-                        logger.warn { "ping timeout!" }
-                    }
-                    logger.info { "disconnecting client" }
-                    client.disconnect()
-                    logger.info { "client disconnected" }
                 }
 
                 loop@ while (!closed) {
                     val frame = client.readWsFrame()
-                    @Suppress("IMPLICIT_CAST_TO_ANY") val payload =
-                        if (frame.frameIsBinary) frame.data else frame.data.decodeToString()
+                    val payload: Any = if (!frame.frameIsBinary) {
+                        frame.data.decodeToString()
+                    } else frame.data
+                    _ping.value = false
 
                     when (frame.type) {
                         WsOpcode.Close -> {
+                            logger.trace { "<close" }
                             break@loop
                         }
                         WsOpcode.Ping -> {
+                            logger.trace { "<ping" }
                             client.sendWsFrame(
                                 WsFrame(
                                     frame.data,
@@ -144,9 +151,10 @@ class RawSocketWebSocketClient(
                             )
                         }
                         WsOpcode.Pong -> {
-                            _ping.value = true
+                            logger.trace { "<pong" }
                         }
                         else -> {
+                            logger.trace { "<message" }
                             when (payload) {
                                 is String -> onStringMessage.forEach { it(payload) }
                                 is ByteArray -> onBinaryMessage.forEach { it(payload) }
