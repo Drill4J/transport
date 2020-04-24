@@ -9,7 +9,7 @@ jobs:
     name: Publish for macOS platform
     runs-on: macOS-latest
     steps:
-      - uses: actions/checkout@v1
+      - uses: actions/checkout@v2
       - name: Publish
         run: |
           gradle publish
@@ -23,7 +23,7 @@ jobs:
     name: Publish for Linux platform
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v1
+      - uses: actions/checkout@v2
       - name: Publish
         run: |
           gradle publishLinuxX64PublicationToMavenRepository
@@ -35,7 +35,7 @@ jobs:
     name: Publish for Windows platform (Windows platform)
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v1
+      - uses: actions/checkout@v2
       - name: Publish
         run: |
           gradle publishMingwX64PublicationToMavenRepository
