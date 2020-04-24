@@ -109,7 +109,7 @@ class RawSocketWebSocketClient(
                     try {
                         while (!closed) {
                             if (_ping.value) {
-                                logger.debug { "ping>" }
+                                logger.trace { "ping>" }
                                 client.sendWsFrame(pingFrame)
                                 withTimeout(7000L ) {
                                     while (_ping.value) {
