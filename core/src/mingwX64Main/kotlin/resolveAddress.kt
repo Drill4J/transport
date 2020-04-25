@@ -1,11 +1,11 @@
 package com.epam.drill.transport.net
 
+import com.epam.drill.internal.socket.socket_get_error
 import kotlinx.cinterop.*
 import platform.posix.*
-import com.epam.drill.internal.socket.socket_get_error
 import platform.windows.LPADDRINFOVar
 
-fun resolveAddress(host: String, port: Int) = memScoped {
+actual fun resolveAddress(host: String, port: Int): Any = memScoped {
     val addr = allocArray<LPADDRINFOVar>(1)
     val alloc = alloc<platform.windows.addrinfo>()
     alloc.ai_family = AF_INET
@@ -17,7 +17,7 @@ fun resolveAddress(host: String, port: Int) = memScoped {
     aiAddr as CValuesRef<sockaddr>
 }
 
-fun getAvailableBytes(sockRaw: ULong): Int {
+actual fun getAvailableBytes(sockRaw: ULong): Int {
     val bytes_available = intArrayOf(0, 0)
     @Suppress("UNCHECKED_CAST")
     ioctlsocket(
@@ -29,21 +29,13 @@ fun getAvailableBytes(sockRaw: ULong): Int {
 
 }
 
-fun close(sockRaw: ULong) {
+actual fun close(sockRaw: ULong) {
     closesocket(sockRaw)
 }
 
-fun setSocketNonBlocking(sockRaw: ULong) = memScoped {
+actual fun setSocketNonBlocking(sockRaw: ULong) = memScoped<Unit> {
     val mode = alloc<u_longVar>()
     mode.value = 1.convert()
     (ioctlsocket(sockRaw, FIONBIO.convert(), mode.ptr) == 0)
 }
-
-fun isAllowedSocketError() = socket_get_error() == EAGAIN
-
-fun checkErrors(name: String) {
-    val error = socket_get_error()
-    if (error != 0) {
-        error("error($name): $error")
-    }
-}
+actual fun getError(): Int = socket_get_error()
