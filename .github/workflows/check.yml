@@ -1,0 +1,24 @@
+name: Check transport
+on:
+  pull_request:
+    branches:
+      - master
+
+jobs:
+  check_nix:
+    name: Check for nix platforms (Linux)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Check
+        run: |
+          gradle --no-daemon -si build
+  check_windlows:
+    name: Check for windows platform
+    runs-on: windows-latest
+    if: "contains(github.event.head_commit.message, 'mingw check')"
+    steps:
+      - uses: actions/checkout@v2
+      - name: Check
+        run: |
+          gradle --no-daemon -si build
