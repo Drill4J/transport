@@ -1,8 +1,7 @@
 package com.epam.drill.transport.net
 
-import kotlinx.cinterop.convert
-import kotlinx.cinterop.memScoped
-import io.ktor.utils.io.internal.utils.KX_SOCKET
+import io.ktor.utils.io.internal.utils.*
+import kotlinx.cinterop.*
 import platform.posix.*
 
 class NativeSocketClient(sockfd: KX_SOCKET) : NativeSocket(sockfd) {
@@ -22,12 +21,13 @@ class NativeSocketClient(sockfd: KX_SOCKET) : NativeSocket(sockfd) {
     @Suppress("RemoveRedundantCallsOfConversionMethods")
     fun connect(host: String, port: Int) {
         memScoped {
-            val inetaddr = resolveAddress(host, port)
+            @Suppress("UNCHECKED_CAST")
+            val inetaddr = resolveAddress(host, port) as CValuesRef<sockaddr>
             checkErrors("getaddrinfo")
 
             @Suppress("RemoveRedundantCallsOfConversionMethods") val connected =
                 connect(sockfd, inetaddr, sockaddr_in.size.convert())
-            checkErrors("connect")
+            checkErrors("connect to ${host}:${port}")
             setNonBlocking()
             if (connected != 0) {
                 _connected = false

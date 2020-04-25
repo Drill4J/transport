@@ -2,7 +2,7 @@
 
 package com.epam.drill.transport.net
 
-import com.epam.drill.internal.socket.socket_get_error
+import com.epam.drill.internal.socket.*
 import kotlinx.cinterop.*
 import platform.posix.*
 
@@ -40,7 +40,7 @@ fun CPointer<sockaddr_in>.set(ip: IP, port: Int) {
     addr.pointed.sin_port = swapBytes(port.toUShort())
 }
 
-fun resolveAddress(host: String, port: Int) = memScoped {
+actual fun resolveAddress(host: String, port: Int): Any = memScoped {
 
     val ip = IP.fromHost(host)
     val addr = allocArray<sockaddr_in>(1)
@@ -54,32 +54,22 @@ fun swapBytes(v: UShort): UShort =
     (((v.toInt() and 0xFF) shl 8) or ((v.toInt() ushr 8) and 0xFF)).toUShort()
 
 
-fun getAvailableBytes(sockRaw: ULong): Int {
+actual fun getAvailableBytes(sockRaw: ULong): Int {
     val bytes_available = intArrayOf(0, 0)
     ioctl(sockRaw.toInt(), FIONREAD, bytes_available.refTo(0))
     return bytes_available[0]
 
 }
 
-fun close(sockRaw: ULong) {
+actual fun close(sockRaw: ULong) {
     platform.posix.shutdown(sockRaw.toInt(), SHUT_RDWR)
 }
 
-fun setSocketNonBlocking(sockRaw: ULong) {
+actual fun setSocketNonBlocking(sockRaw: ULong) {
     var flags = fcntl(sockRaw.toInt(), F_GETFL, 0)
     if (flags == -1) return
     flags = (flags or O_NONBLOCK)
     fcntl(sockRaw.toInt(), F_SETFL, flags)
 }
 
-fun isAllowedSocketError(): Boolean {
-    val socketError = socket_get_error()
-    return socketError == EAGAIN || socketError == 316 || socketError == 0
-}
-
-fun checkErrors(name: String) {
-    val error = socket_get_error()
-    if (error != 0) {
-        error("error($name): $error")
-    }
-}
+actual fun getError() = socket_get_error()
