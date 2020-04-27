@@ -64,17 +64,9 @@ class RawSocketWebSocketClient(
     private val _closed = atomic(false)
     private val _ping = atomic(true)
 
-    internal suspend fun connect() {
-        logger.debug { "connecting..." }
-        val data = (buildList<String> {
-            add(
-                "GET ${if (path.isEmpty()) {
-                    url
-                } else {
-                    path
-                }
-                } HTTP/1.1"
-            )
+    internal fun connect() {
+        val request = (buildList<String> {
+            add("GET ${path.ifEmpty { url }} HTTP/1.1")
             add("Host: $host:$port")
             add("Pragma: no-cache")
             add("Cache-Control: no-cache")
@@ -90,19 +82,25 @@ class RawSocketWebSocketClient(
             param.forEach { (k, v) ->
                 add("$k: $v")
             }
-        }.joinToString("\r\n") + "\r\n\n").toByteArray()
-        client.writeBytes(data)
-        // Read response
-        while (true) {
-            val line = client.readLine().trimEnd()
-            if (line.isEmpty()) {
-                break
-            }
-        }
-
+        }.joinToString("\r\n") + "\r\n\n")
         launch {
-            onOpen(Unit)
             try {
+                logger.debug { "connecting to $host:$port..." }
+                withTimeout(10000L) {
+                    logger.trace { "request:\n$request" }
+                    client.writeBytes(request.toByteArray())
+                    // Read response
+                    val response = StringBuilder()
+                    while (true) {
+                        val line = client.readLine().trimEnd()
+                        if (line.isEmpty()) {
+                            break
+                        } else response.appendln(line)
+                    }
+                    logger.trace { "response:\n$response" }
+                }
+                logger.debug { "connected to $host:$port" }
+                onOpen(Unit)
                 launch {
                     val pingFrame = WsFrame(data = ByteArray(0), type = WsOpcode.Ping)
                     _ping.value = true
@@ -111,7 +109,7 @@ class RawSocketWebSocketClient(
                             if (_ping.value) {
                                 logger.trace { "ping>" }
                                 client.sendWsFrame(pingFrame)
-                                withTimeout(7000L ) {
+                                withTimeout(10000L ) {
                                     while (_ping.value) {
                                         delay(500L)
                                     }
@@ -122,10 +120,10 @@ class RawSocketWebSocketClient(
                             }
                         }
                     } catch (e: Throwable) {
-                        logger.error(e) { "ping timeout!" }
-                        logger.info { "disconnecting client" }
-                        client.disconnect()
-                        logger.info { "client disconnected" }
+                        logger.error(e) { "Ping timeout!" }
+                        logger.info { "closing client" }
+                        client.close()
+                        logger.info { "client cloased" }
                     }
                 }
 
@@ -167,7 +165,6 @@ class RawSocketWebSocketClient(
                 onError(e)
             }
             onClose(Unit)
-            logger.debug { "socket closed" }
         }
     }
 
