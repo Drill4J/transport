@@ -91,6 +91,11 @@ class RawSocketWebSocketClient(
                     client.writeBytes(request.toByteArray())
                     // Read response
                     val response = StringBuilder()
+                    val headLine = client.readLine().trimEnd()
+                    val (_, status) = headLine.split(" ")
+                    if (status.toInt() != 101) {
+                        throw RuntimeException("Can't connect to the server: $headLine")
+                    }
                     while (true) {
                         val line = client.readLine().trimEnd()
                         if (line.isEmpty()) {
@@ -100,7 +105,7 @@ class RawSocketWebSocketClient(
                     logger.trace { "response:\n$response" }
                 }
                 logger.debug { "connected to $host:$port" }
-                onOpen(Unit)
+                onOpen.forEach { it() }
                 launch {
                     val pingFrame = WsFrame(data = ByteArray(0), type = WsOpcode.Ping)
                     _ping.value = true
@@ -152,19 +157,22 @@ class RawSocketWebSocketClient(
                             logger.trace { "<pong" }
                         }
                         else -> {
-                            logger.trace { "<message" }
-                            when (payload) {
-                                is String -> onStringMessage.forEach { it(payload) }
-                                is ByteArray -> onBinaryMessage.forEach { it(payload) }
+                            launch {
+                                logger.trace { "<message" }
+                                when (payload) {
+                                    is String -> onStringMessage.forEach { it(payload) }
+                                    is ByteArray -> onBinaryMessage.forEach { it(payload) }
+                                }
+                                onAnyMessage.forEach { it(payload) }
                             }
-                            onAnyMessage.forEach { it(payload) }
                         }
                     }
                 }
             } catch (e: Throwable) {
-                onError(e)
+                onError.forEach { it(e) }
+
             }
-            onClose(Unit)
+            onClose.forEach { it() }
         }
     }
 

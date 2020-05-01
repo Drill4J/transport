@@ -1,14 +1,12 @@
 package com.epam.drill.transport.ws
 
-import com.epam.drill.transport.async.Signal
-
 abstract class WebSocketClient protected constructor(
     val url: String,
     val protocols: List<String>?
 ) {
-    val onOpen = Signal<Unit>()
-    val onError = Signal<Throwable>()
-    val onClose = Signal<Unit>()
+    val onOpen = mutableSetOf<() -> Unit>()
+    val onError = mutableSetOf<(Throwable) -> Unit>()
+    val onClose = mutableSetOf<() -> Unit>()
 
     val onBinaryMessage = mutableSetOf<suspend (ByteArray) -> Unit>()
     val onStringMessage = mutableSetOf<suspend (String) -> Unit>()

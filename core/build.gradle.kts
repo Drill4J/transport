@@ -8,6 +8,12 @@ val ktorLibsVersion: String by extra
 val coroutinesVersion: String by extra
 val drillLoggerVersion: String by extra
 
+configurations.all {
+    resolutionStrategy.dependencySubstitution {
+        substitute(module("org.jetbrains.kotlinx:kotlinx-coroutines-core-native:$coroutinesVersion")).with(module("org.jetbrains.kotlinx:kotlinx-coroutines-core-native:$coroutinesVersion-native-mt"))
+    }
+}
+
 kotlin {
 
     targets {

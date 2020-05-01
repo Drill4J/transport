@@ -1,9 +1,10 @@
 package com.epam.drill.transport.ws
 
-import com.epam.drill.transport.lang.EOFException
-import com.epam.drill.transport.net.AsyncStream
+import com.epam.drill.transport.lang.*
+import com.epam.drill.transport.net.*
 import com.epam.drill.transport.stream.*
-import kotlin.test.fail
+import kotlinx.coroutines.*
+import kotlin.test.*
 
 suspend fun AsyncStream.readWsFrame(): WsFrame {
     val asyncStream = this
@@ -51,6 +52,9 @@ private suspend fun AsyncStream.readExactBytes(length: Int): ByteArray {
     return byteArray
 }
 
-suspend fun AsyncStream.sendWsFrame(frame: WsFrame) {
-    this.writeBytes(frame.toByteArray())
+@SharedImmutable
+private val sendContext = newSingleThreadContext("send dispatcher")
+
+suspend fun AsyncStream.sendWsFrame(frame: WsFrame) = withContext(sendContext) {
+    writeBytes(frame.toByteArray())
 }
