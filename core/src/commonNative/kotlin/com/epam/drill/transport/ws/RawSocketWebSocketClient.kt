@@ -108,21 +108,17 @@ class RawSocketWebSocketClient(
                 onOpen.forEach { it() }
                 launch {
                     val pingFrame = WsFrame(data = ByteArray(0), type = WsOpcode.Ping)
-                    _ping.value = true
                     try {
                         while (!closed) {
-                            if (_ping.value) {
-                                logger.trace { "ping>" }
-                                client.sendWsFrame(pingFrame)
-                                withTimeout(10000L ) {
-                                    while (_ping.value) {
-                                        delay(500L)
-                                    }
+                            logger.trace { "ping>" }
+                            client.sendWsFrame(pingFrame)
+                            _ping.value = false
+                            withTimeout(15000L) {
+                                while (!_ping.value) {
+                                    delay(500L)
                                 }
-                            } else {
-                                _ping.value = true
-                                delay(3000L)
                             }
+                            delay(5000L)
                         }
                     } catch (e: Throwable) {
                         logger.error(e) { "Ping timeout!" }
@@ -137,7 +133,6 @@ class RawSocketWebSocketClient(
                     val payload: Any = if (!frame.frameIsBinary) {
                         frame.data.decodeToString()
                     } else frame.data
-                    _ping.value = false
 
                     when (frame.type) {
                         WsOpcode.Close -> {
@@ -155,6 +150,7 @@ class RawSocketWebSocketClient(
                         }
                         WsOpcode.Pong -> {
                             logger.trace { "<pong" }
+                            _ping.value = true
                         }
                         else -> {
                             launch {
