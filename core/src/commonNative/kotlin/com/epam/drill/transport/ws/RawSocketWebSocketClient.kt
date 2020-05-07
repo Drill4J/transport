@@ -114,17 +114,19 @@ class RawSocketWebSocketClient(
                             client.sendWsFrame(pingFrame)
                             _ping.value = false
                             withTimeout(15000L) {
-                                while (!_ping.value) {
+                                while (!_ping.value && !closed) {
                                     delay(500L)
                                 }
                             }
                             delay(5000L)
                         }
                     } catch (e: Throwable) {
-                        logger.error(e) { "Ping timeout!" }
-                        logger.info { "closing client" }
-                        client.close()
-                        logger.info { "client cloased" }
+                        if (!closed) {
+                            logger.error(e) { "Ping timeout!" }
+                            logger.info { "closing client" }
+                            client.close()
+                            logger.info { "client closed" }
+                        }
                     }
                 }
 
