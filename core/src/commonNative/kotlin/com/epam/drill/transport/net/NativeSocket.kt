@@ -4,18 +4,11 @@ package com.epam.drill.transport.net
 
 import com.epam.drill.internal.socket.setup_buffer_size
 import com.epam.drill.internal.socket.socket_get_error
-import kotlinx.cinterop.convert
-import kotlinx.cinterop.memScoped
-import kotlinx.cinterop.refTo
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.sync.Mutex
-import kotlinx.coroutines.sync.withLock
-import io.ktor.utils.io.internal.utils.KX_SOCKET
-import platform.posix.EAGAIN
-import platform.posix.init_sockets
-import platform.posix.recv
-import platform.posix.send
-import kotlin.test.fail
+import com.epam.drill.transport.exception.*
+import io.ktor.utils.io.internal.utils.*
+import kotlinx.cinterop.*
+import kotlinx.coroutines.*
+import platform.posix.*
 
 abstract class NativeSocket constructor(@Suppress("RedundantSuspendModifier") val sockfd: KX_SOCKET) {
     companion object {
@@ -30,7 +23,7 @@ abstract class NativeSocket constructor(@Suppress("RedundantSuspendModifier") va
     private val availableBytes
         get() = run {
             if (!isAlive()) {
-                error("closed")
+                throw AlreadyClosedException("closed")
             }
             getAvailableBytes(sockfd.toULong())
         }
@@ -40,13 +33,13 @@ abstract class NativeSocket constructor(@Suppress("RedundantSuspendModifier") va
         var result = 0
         while (true) {
             if (attempts-- <= 0)
-                fail("Too many attempts to send")
+                throw ReadRetryException("Too many attempts to recv")
             result += recv(sockfd, data.refTo(offset), count.convert(), 0).toInt()
 
             if (result < 0) {
                 val error = socket_get_error()
                 if (error == EAGAIN) continue
-                fail("recv(): $error")
+                throw WsException("recv(): $error")
             }
             break
         }
@@ -58,7 +51,6 @@ abstract class NativeSocket constructor(@Suppress("RedundantSuspendModifier") va
         return recv(data, offset, count)
     }
 
-    private val mt = Mutex()
 
     suspend fun send(data: ByteArray, offset: Int = 0, count: Int = data.size - offset) {
         if (count <= 0) return
@@ -66,23 +58,21 @@ abstract class NativeSocket constructor(@Suppress("RedundantSuspendModifier") va
         var remaining = count
         var coffset = offset
         memScoped {
-            mt.withLock(this) {
-                while (remaining > 0) {
-                    if (attempts-- <= 0)
-                        fail("Too many attempts to send")
-                    val result = send(sockfd, data.refTo(coffset), remaining.convert(), 0).toInt()
+            while (remaining > 0) {
+                if (attempts-- <= 0)
+                    throw SendRetryException("Too many attempts to send")
+                val result = send(sockfd, data.refTo(coffset), remaining.convert(), 0).toInt()
 
-                    if (result > 0) {
-                        coffset += result
-                        remaining -= result
+                if (result > 0) {
+                    coffset += result
+                    remaining -= result
+                }
+                if (result < count) {
+                    if (isAllowedSocketError()) {
+                        delay(100)
+                        continue
                     }
-                    if (result < count) {
-                        if (isAllowedSocketError()) {
-                            delay(100)
-                            continue
-                        }
-                        fail("send(): ${socket_get_error()}")
-                    }
+                    throw WsException("send(): ${socket_get_error()}")
                 }
             }
         }

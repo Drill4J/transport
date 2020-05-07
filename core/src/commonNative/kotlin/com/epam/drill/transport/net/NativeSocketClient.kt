@@ -1,6 +1,8 @@
 package com.epam.drill.transport.net
 
+import com.epam.drill.transport.exception.*
 import io.ktor.utils.io.internal.utils.*
+import kotlinx.atomicfu.*
 import kotlinx.cinterop.*
 import platform.posix.*
 
@@ -12,10 +14,10 @@ class NativeSocketClient(sockfd: KX_SOCKET) : NativeSocket(sockfd) {
         }
     }
 
-    private var _connected = false
-    override fun isAlive() = _connected
+    private var _connected = atomic(false)
+    override fun isAlive() = _connected.value
     override fun setIsAlive(isAlive: Boolean) {
-        _connected = false
+        _connected.value = isAlive
     }
 
     @Suppress("RemoveRedundantCallsOfConversionMethods")
@@ -30,9 +32,11 @@ class NativeSocketClient(sockfd: KX_SOCKET) : NativeSocket(sockfd) {
             checkErrors("connect to ${host}:${port}")
             setNonBlocking()
             if (connected != 0) {
-                _connected = false
+                _connected.value = false
+                throw ConnectException()
+            } else {
+                _connected.value = true
             }
-            _connected = true
         }
     }
 }
