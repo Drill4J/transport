@@ -1,6 +1,7 @@
 package com.epam.drill.transport.ws
 
 import com.epam.drill.transport.common.ws.*
+import com.epam.drill.transport.exception.*
 import com.epam.drill.transport.lang.*
 import com.epam.drill.transport.net.*
 import com.epam.drill.transport.stream.*
@@ -59,7 +60,7 @@ class RawSocketWebSocketClient(
 
     var closed: Boolean
         get() = _closed.value
-        private set(value) = _closed.update { value }
+        set(value) = _closed.update { value }
 
     private val _closed = atomic(false)
     private val _ping = atomic(true)
@@ -108,25 +109,22 @@ class RawSocketWebSocketClient(
                 onOpen.forEach { it() }
                 launch {
                     val pingFrame = WsFrame(data = ByteArray(0), type = WsOpcode.Ping)
-                    try {
-                        while (!closed) {
-                            logger.trace { "ping>" }
-                            client.sendWsFrame(pingFrame)
-                            _ping.value = false
-                            withTimeout(15000L) {
-                                while (!_ping.value && !closed) {
-                                    delay(500L)
-                                }
+                    while (!closed) {
+                        logger.trace { "ping>" }
+                        client.sendWsFrame(pingFrame)
+                        _ping.value = false
+                        withTimeoutOrNull(15000L) {
+                            while (!_ping.value && !closed) {
+                                delay(500L)
                             }
-                            delay(5000L)
-                        }
-                    } catch (e: Throwable) {
-                        if (!closed) {
-                            logger.error(e) { "Ping timeout!" }
-                            logger.info { "closing client" }
-                            client.close()
-                            logger.info { "client closed" }
-                        }
+                        } ?: break
+                        delay(5000L)
+                    }
+                    if (!closed) {
+                        logger.error { "Ping timeout!" }
+                        logger.info { "closing client" }
+                        client.close()
+                        logger.info { "client closed" }
                     }
                 }
 
@@ -155,14 +153,12 @@ class RawSocketWebSocketClient(
                             _ping.value = true
                         }
                         else -> {
-                            launch {
-                                logger.trace { "<message" }
-                                when (payload) {
-                                    is String -> onStringMessage.forEach { it(payload) }
-                                    is ByteArray -> onBinaryMessage.forEach { it(payload) }
-                                }
-                                onAnyMessage.forEach { it(payload) }
+                            logger.trace { "<message" }
+                            when (payload) {
+                                is String -> onStringMessage.forEach { it(payload) }
+                                is ByteArray -> onBinaryMessage.forEach { it(payload) }
                             }
+                            onAnyMessage.forEach { it(payload) }
                         }
                     }
                 }

@@ -37,11 +37,14 @@ kotlin {
         }
         mingwX64()
         linuxX64()
-        macosX64()
+        macosX64 {
+            compilations["test"].cinterops.create("testSockets")
+        }
     }
     sourceSets {
         all {
             languageSettings.useExperimentalAnnotation("kotlin.ExperimentalUnsignedTypes")
+            languageSettings.useExperimentalAnnotation("kotlin.time.ExperimentalTime")
         }
         commonMain {
             dependencies {
