@@ -3,6 +3,7 @@
 package com.epam.drill.transport.stream
 
 import com.epam.drill.transport.ByteArrayBuilder
+import com.epam.drill.transport.exception.*
 import com.epam.drill.transport.lang.*
 import com.epam.drill.transport.readS32BE
 import com.epam.drill.transport.readU16BE
@@ -81,7 +82,7 @@ suspend fun AsyncInputStream.readExact(buffer: ByteArray, offset: Int, len: Int)
 internal suspend inline fun <R> AsyncInputStream.readSmallTempExact(size: Int, callback: ByteArray.() -> R): R =
     smallBytesPool.allocThis {
         val read = read(this, 0, size)
-        if (read != size) error("Couldn't read exact size=$size but read=$read")
+        if (read != size) throw WsException("Couldn't read exact size=$size but read=$read")
         callback()
     }
 

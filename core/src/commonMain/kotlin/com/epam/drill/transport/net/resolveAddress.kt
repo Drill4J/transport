@@ -1,5 +1,7 @@
 package com.epam.drill.transport.net
 
+import com.epam.drill.transport.exception.*
+
 expect fun resolveAddress(host: String, port: Int): Any
 
 expect fun getAvailableBytes(sockRaw: ULong): Int
@@ -20,6 +22,6 @@ fun isAllowedSocketError(): Boolean {
 fun checkErrors(name: String) {
     val error = getError()
     if (error != 0) {
-        error("error($name): ${errorsMapping[error]?.description ?: "unknown error"}")
+        throw WsException("error($name): ${errorsMapping[error]?.description ?: "unknown error"}")
     }
 }
