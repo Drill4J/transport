@@ -1,5 +1,6 @@
 package com.epam.drill.transport.ws
 
+import com.epam.drill.transport.exception.*
 import com.epam.drill.transport.lang.*
 import com.epam.drill.transport.net.*
 import com.epam.drill.transport.stream.*
@@ -25,7 +26,7 @@ suspend fun AsyncStream.readWsFrame(): WsFrame {
         126 -> asyncStream.readU16BE()
         127 -> {
             val tmp = asyncStream.readS32BE()
-            if (tmp != 0) error("message too long")
+            if (tmp != 0) throw WsException("message too long")
             asyncStream.readS32BE()
         }
         else -> partialLength

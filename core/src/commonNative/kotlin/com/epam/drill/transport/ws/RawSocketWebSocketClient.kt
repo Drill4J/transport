@@ -1,7 +1,6 @@
 package com.epam.drill.transport.ws
 
 import com.epam.drill.transport.common.ws.*
-import com.epam.drill.transport.exception.*
 import com.epam.drill.transport.lang.*
 import com.epam.drill.transport.net.*
 import com.epam.drill.transport.stream.*
@@ -153,12 +152,14 @@ class RawSocketWebSocketClient(
                             _ping.value = true
                         }
                         else -> {
-                            logger.trace { "<message" }
-                            when (payload) {
-                                is String -> onStringMessage.forEach { it(payload) }
-                                is ByteArray -> onBinaryMessage.forEach { it(payload) }
+                            launch{
+                                logger.trace { "<message" }
+                                when (payload) {
+                                    is String -> onStringMessage.forEach { it(payload) }
+                                    is ByteArray -> onBinaryMessage.forEach { it(payload) }
+                                }
+                                onAnyMessage.forEach { it(payload) }
                             }
-                            onAnyMessage.forEach { it(payload) }
                         }
                     }
                 }

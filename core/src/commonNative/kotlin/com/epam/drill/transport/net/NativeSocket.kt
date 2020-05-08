@@ -2,8 +2,7 @@
 
 package com.epam.drill.transport.net
 
-import com.epam.drill.internal.socket.setup_buffer_size
-import com.epam.drill.internal.socket.socket_get_error
+import com.epam.drill.internal.socket.*
 import com.epam.drill.transport.exception.*
 import io.ktor.utils.io.internal.utils.*
 import kotlinx.cinterop.*
@@ -39,7 +38,7 @@ abstract class NativeSocket constructor(@Suppress("RedundantSuspendModifier") va
             if (result < 0) {
                 val error = socket_get_error()
                 if (error == EAGAIN) continue
-                throw WsException("recv(): $error")
+                throwError("recv", error)
             }
             break
         }
@@ -68,11 +67,13 @@ abstract class NativeSocket constructor(@Suppress("RedundantSuspendModifier") va
                     remaining -= result
                 }
                 if (result < count) {
-                    if (isAllowedSocketError()) {
+                    val socketError = getError()
+
+                    if (socketError == EAGAIN_ERROR || socketError == 316 || socketError == 0) {
                         delay(100)
                         continue
                     }
-                    throw WsException("send(): ${socket_get_error()}")
+                    throwError("send", socketError)
                 }
             }
         }
