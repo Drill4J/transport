@@ -107,17 +107,19 @@ class RawSocketWebSocketClient(
                 logger.debug { "connected to $host:$port" }
                 onOpen.forEach { it() }
                 launch {
-                    val pingFrame = WsFrame(data = ByteArray(0), type = WsOpcode.Ping)
+                    val pingFrame = WsFrame(data = byteArrayOf(), type = WsOpcode.Ping)
                     while (!closed) {
-                        logger.trace { "ping>" }
-                        client.sendWsFrame(pingFrame)
-                        _ping.value = false
-                        withTimeoutOrNull(15000L) {
-                            while (!_ping.value && !closed) {
+                        _ping.value = true
+                        delay(5000L)
+                        if (_ping.value && !closed) {
+                            client.sendWsFrame(pingFrame)
+                            logger.trace { "ping>" }
+                            for (i in 1..30) {
+                                if (!_ping.value || closed) break
                                 delay(500L)
                             }
-                        } ?: break
-                        delay(5000L)
+                            if (_ping.value) break
+                        }
                     }
                     if (!closed) {
                         logger.error { "Ping timeout!" }
@@ -132,7 +134,7 @@ class RawSocketWebSocketClient(
                     val payload: Any = if (!frame.frameIsBinary) {
                         frame.data.decodeToString()
                     } else frame.data
-
+                    _ping.value = false
                     when (frame.type) {
                         WsOpcode.Close -> {
                             logger.trace { "<close" }
@@ -149,10 +151,9 @@ class RawSocketWebSocketClient(
                         }
                         WsOpcode.Pong -> {
                             logger.trace { "<pong" }
-                            _ping.value = true
                         }
                         else -> {
-                            launch{
+                            launch {
                                 logger.trace { "<message" }
                                 when (payload) {
                                     is String -> onStringMessage.forEach { it(payload) }
