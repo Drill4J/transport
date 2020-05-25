@@ -29,7 +29,7 @@ suspend fun RWebsocketClient(
     }
     val host = uri.host ?: "127.0.0.1"
     val port = uri.defaultPort.takeIf { it != URL.DEFAULT_PORT } ?: if (secure) 443 else 80
-
+    logger.trace { "try to connect host:'${host}' port:'${port}'" }
     val client = AsyncClient(host, port, secure = secure)
     return RawSocketWebSocketClient(
         coroutineContext,

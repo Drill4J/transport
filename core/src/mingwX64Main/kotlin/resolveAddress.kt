@@ -2,18 +2,25 @@ package com.epam.drill.transport.net
 
 import com.epam.drill.internal.socket.socket_get_error
 import kotlinx.cinterop.*
+import mu.*
 import platform.posix.*
 import platform.windows.LPADDRINFOVar
 
+@SharedImmutable
+private val logger = KotlinLogging.logger("SocketClient")
+
 actual fun resolveAddress(host: String, port: Int): Any = memScoped {
+    logger.trace { "try to resolve address for host:'${host}' port:'${port}'" }
     val addr = allocArray<LPADDRINFOVar>(1)
     val alloc = alloc<platform.windows.addrinfo>()
     alloc.ai_family = AF_INET
     alloc.ai_socktype = SOCK_STREAM
     alloc.ai_protocol = IPPROTO_TCP
     platform.windows.getaddrinfo(host, port.toString(), alloc.ptr, addr)
+    logger.trace {"address resolved $addr"}
     val info = addr[0]!!.pointed
     val aiAddr: CPointer<sockaddr> = info.ai_addr!!
+    logger.trace {"info resolved $aiAddr"}
     aiAddr as CValuesRef<sockaddr>
 }
 
