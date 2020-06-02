@@ -1,6 +1,7 @@
 package com.epam.drill.transport.ws
 
 import com.epam.drill.transport.common.ws.*
+import com.epam.drill.transport.exception.*
 import com.epam.drill.transport.lang.*
 import com.epam.drill.transport.net.*
 import com.epam.drill.transport.stream.*
@@ -173,16 +174,18 @@ class RawSocketWebSocketClient(
     }
 
     override fun close(code: Int, reason: String) {
-        logger.debug { "closing socket: code=$code, reason=$reason" }
-        closed = true
-        launch {
-            client.sendWsFrame(
-                WsFrame(
-                    byteArrayOf(),
-                    WsOpcode.Close
-                )
-            )
-        }
+        if (!closed) {
+            logger.debug { "closing socket: code=$code, reason=$reason" }
+            closed = true
+            client.disconnect()
+            launch {
+                try {
+                    client.sendWsFrame(WsFrame(byteArrayOf(), WsOpcode.Close))
+                } catch (e: WsException) {
+                    logger.warn { "Connection reset by peer." }
+                }
+            }
+        } else logger.warn { "socket already closed (code=$code, reason=$reason)" }
     }
 
     override suspend fun send(message: String) {
