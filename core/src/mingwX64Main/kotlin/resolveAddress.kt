@@ -1,13 +1,13 @@
 package com.epam.drill.transport.net
 
 import com.epam.drill.internal.socket.socket_get_error
+import com.epam.drill.logger.*
 import kotlinx.cinterop.*
-import mu.*
 import platform.posix.*
 import platform.windows.LPADDRINFOVar
 
 @SharedImmutable
-private val logger = KotlinLogging.logger("SocketClient")
+private val logger = Logging.logger("SocketClient")
 
 actual fun resolveAddress(host: String, port: Int): Any = memScoped {
     logger.trace { "try to resolve address for host:'${host}' port:'${port}'" }
