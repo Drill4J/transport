@@ -1,5 +1,6 @@
 package com.epam.drill.transport.ws
 
+import com.epam.drill.logger.*
 import com.epam.drill.transport.common.ws.*
 import com.epam.drill.transport.exception.*
 import com.epam.drill.transport.lang.*
@@ -8,12 +9,11 @@ import com.epam.drill.transport.stream.*
 import com.epam.drill.util.encoding.*
 import kotlinx.atomicfu.*
 import kotlinx.coroutines.*
-import mu.*
 import kotlin.coroutines.*
 import kotlin.native.concurrent.*
 
 @SharedImmutable
-private val logger = KotlinLogging.logger("RawSocketWebSocketClient")
+private val logger = Logging.logger("RawSocketWebSocketClient")
 
 suspend fun RWebsocketClient(
     url: String,
