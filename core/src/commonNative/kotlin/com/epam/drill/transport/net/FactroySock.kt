@@ -29,7 +29,7 @@ object NativeAsyncSocketFactory : AsyncSocketFactory() {
     }
 
 
-    override suspend fun createClient(secure: Boolean): AsyncClient {
+    override suspend fun createClient(secure: Boolean): NativeAsyncClient {
         return NativeAsyncClient(
             NativeSocketClient()
         )

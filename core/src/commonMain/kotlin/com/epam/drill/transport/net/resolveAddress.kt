@@ -8,7 +8,7 @@ expect fun getAvailableBytes(sockRaw: ULong): Int
 
 expect fun close(sockRaw: ULong)
 
-expect fun setSocketNonBlocking(sockRaw: ULong)
+expect fun setSocketBlocking(sockRaw: ULong, is_blocking: Boolean)
 
 expect fun getError(): Int
 

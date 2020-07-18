@@ -15,4 +15,5 @@ abstract class WebSocketClient protected constructor(
     open fun close(code: Int = 0, reason: String = ""): Unit = Unit
     open suspend fun send(message: String): Unit = Unit
     open suspend fun send(message: ByteArray): Unit = Unit
+    open fun blockingSend(message: ByteArray): Unit = Unit
 }

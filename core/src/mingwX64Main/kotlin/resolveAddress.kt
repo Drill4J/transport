@@ -17,10 +17,10 @@ actual fun resolveAddress(host: String, port: Int): Any = memScoped {
     alloc.ai_socktype = SOCK_STREAM
     alloc.ai_protocol = IPPROTO_TCP
     platform.windows.getaddrinfo(host, port.toString(), alloc.ptr, addr)
-    logger.trace {"address resolved $addr"}
+    logger.trace { "address resolved $addr" }
     val info = addr[0]!!.pointed
     val aiAddr: CPointer<sockaddr> = info.ai_addr!!
-    logger.trace {"info resolved $aiAddr"}
+    logger.trace { "info resolved $aiAddr" }
     aiAddr as CValuesRef<sockaddr>
 }
 
@@ -40,9 +40,13 @@ actual fun close(sockRaw: ULong) {
     closesocket(sockRaw)
 }
 
-actual fun setSocketNonBlocking(sockRaw: ULong) = memScoped<Unit> {
+actual fun setSocketBlocking(sockRaw: ULong, is_blocking: Boolean) = memScoped<Unit> {
     val mode = alloc<u_longVar>()
-    mode.value = 1.convert()
+    if (is_blocking)
+        mode.value = 0.convert()
+    else
+        mode.value = 1.convert()
     (ioctlsocket(sockRaw, FIONBIO.convert(), mode.ptr) == 0)
 }
+
 actual fun getError(): Int = socket_get_error()

@@ -17,7 +17,7 @@ abstract class NativeSocket constructor(@Suppress("RedundantSuspendModifier") va
     }
 
     abstract fun isAlive(): Boolean
-    abstract fun setIsAlive(isAlive: Boolean): Unit
+    abstract fun setIsAlive(isAlive: Boolean)
 
     private val availableBytes
         get() = run {
@@ -79,6 +79,33 @@ abstract class NativeSocket constructor(@Suppress("RedundantSuspendModifier") va
         }
     }
 
+    fun blockingSend(data: ByteArray, offset: Int = 0, count: Int = data.size - offset) {
+        if (count <= 0) return
+        var remaining = count
+        var coffset = offset
+        setSocketBlocking(sockfd.toULong(), true)
+        try {
+            while (remaining > 0) {
+                val result = send(sockfd, data.refTo(coffset), remaining.convert(), 0).toInt()
+                if (result > 0) {
+                    coffset += result
+                    remaining -= result
+                }
+                if (result < count) {
+                    val socketError = getError()
+                    if (socketError == EAGAIN_ERROR || socketError == 316 || socketError == 0) {
+                        sleep(1)
+                        continue
+                    }
+                    throwError("send", socketError)
+                }
+            }
+        } finally {
+            setSocketBlocking(sockfd.toULong(), false)
+        }
+    }
+
+
     @Suppress("RemoveRedundantQualifierName")
     fun close() {
         close(sockfd.toULong())
@@ -86,7 +113,7 @@ abstract class NativeSocket constructor(@Suppress("RedundantSuspendModifier") va
     }
 
     fun setNonBlocking() {
-        setSocketNonBlocking(sockfd.toULong())
+        setSocketBlocking(sockfd.toULong(), false)
         setup_buffer_size(sockfd)
     }
 
