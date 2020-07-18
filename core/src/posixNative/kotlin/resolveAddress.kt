@@ -14,6 +14,7 @@ class IP(val data: UByteArray) {
     val v3 get() = data[3]
     val str get() = "$v0.$v1.$v2.$v3"
     val value: Int get() = (v0.toInt() shl 0) or (v1.toInt() shl 8) or (v2.toInt() shl 16) or (v3.toInt() shl 24)
+
     //val value: Int get() = (v0.toInt() shl 24) or (v1.toInt() shl 16) or (v2.toInt() shl 8) or (v3.toInt() shl 0)
     override fun toString(): String = str
 
@@ -65,11 +66,13 @@ actual fun close(sockRaw: ULong) {
     platform.posix.shutdown(sockRaw.toInt(), SHUT_RDWR)
 }
 
-actual fun setSocketNonBlocking(sockRaw: ULong) {
-    var flags = fcntl(sockRaw.toInt(), F_GETFL, 0)
+actual fun setSocketBlocking(sockRaw: ULong, is_blocking: Boolean) {
+    val flags = fcntl(sockRaw.toInt(), F_GETFL, 0)
     if (flags == -1) return
-    flags = (flags or O_NONBLOCK)
-    fcntl(sockRaw.toInt(), F_SETFL, flags)
+    if (is_blocking)
+        fcntl(sockRaw.convert(), F_SETFL, flags xor O_NONBLOCK)
+    else
+        fcntl(sockRaw.convert(), F_SETFL, flags or O_NONBLOCK)
 }
 
 actual fun getError() = socket_get_error()

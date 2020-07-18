@@ -5,7 +5,7 @@ import com.epam.drill.transport.stream.AsyncInputStream
 import com.epam.drill.transport.stream.AsyncOutputStream
 
 abstract class AsyncSocketFactory {
-    abstract suspend fun createClient(secure: Boolean = false): AsyncClient
+    abstract suspend fun createClient(secure: Boolean = false): NativeAsyncSocketFactory.NativeAsyncClient
 }
 
 @SharedImmutable
@@ -20,7 +20,7 @@ interface AsyncClient : AsyncStream {
         suspend operator fun invoke(host: String, port: Int, secure: Boolean = false) =
             createAndConnect(host, port, secure)
 
-        private suspend fun createAndConnect(host: String, port: Int, secure: Boolean = false): AsyncClient {
+        private suspend fun createAndConnect(host: String, port: Int, secure: Boolean = false): NativeAsyncSocketFactory.NativeAsyncClient {
             val socket = asyncSocketFactory.createClient(secure)
 
             socket.connect(host, port)

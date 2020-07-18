@@ -56,6 +56,7 @@ object Echo {
                 BackgroundThread {
                     while (true) {
                         val frame = nativeAsyncServer.readWsFrame()
+                        println("messages ${frame.type}")
                         try {
                             when (frame.type) {
                                 WsOpcode.Close -> {
@@ -67,7 +68,7 @@ object Echo {
                                 WsOpcode.Pong -> {
                                 }
                                 else -> {
-                                    nativeAsyncServer.sendWsFrame(frame)
+                                    nativeAsyncServer.socket.blockingSend(frame.toByteArray())
                                 }
                             }
                         } catch (ex: Exception) {

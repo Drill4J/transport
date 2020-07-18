@@ -35,7 +35,9 @@ kotlin {
                 }
             }
         }
-        mingwX64()
+        mingwX64(){
+            compilations["test"].cinterops.create("testSockets")
+        }
         linuxX64()
         macosX64 {
             compilations["test"].cinterops.create("testSockets")

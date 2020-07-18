@@ -47,7 +47,7 @@ suspend fun RWebsocketClient(
 
 class RawSocketWebSocketClient(
     override val coroutineContext: CoroutineContext,
-    val client: AsyncClient,
+    val client: NativeAsyncSocketFactory.NativeAsyncClient,
     url: URL,
     protocols: List<String>?,
     val origin: String?,
@@ -64,6 +64,7 @@ class RawSocketWebSocketClient(
 
     private val _closed = atomic(false)
     private val _ping = atomic(true)
+    private val isProcessing = atomic(false)
 
     internal fun connect() {
         val request = (buildList<String> {
@@ -115,11 +116,11 @@ class RawSocketWebSocketClient(
                         if (_ping.value && !closed) {
                             client.sendWsFrame(pingFrame)
                             logger.trace { "ping>" }
-                            for (i in 1..30) {
+                            for (i in 1..50) {
                                 if (!_ping.value || closed) break
-                                delay(500L)
+                                delay(if (isProcessing.value) 10000L else 1000L)
                             }
-                            if (_ping.value) break
+                            if (_ping.value && !isProcessing.value) break
                         }
                     }
                     if (!closed) {
@@ -204,5 +205,14 @@ class RawSocketWebSocketClient(
                 WsOpcode.Binary
             )
         )
+    }
+
+    override fun blockingSend(message: ByteArray) {
+        isProcessing.value = true
+        try {
+            client.socket.blockingSend(WsFrame(message, WsOpcode.Binary).toByteArray())
+        } finally {
+            isProcessing.value = false
+        }
     }
 }

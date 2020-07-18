@@ -4,6 +4,7 @@ import Echo.startServer
 import TestBase
 import com.epam.drill.core.concurrency.*
 import com.epam.drill.logger.*
+import com.epam.drill.logger.api.*
 import com.epam.drill.transport.common.ws.*
 import com.epam.drill.transport.exception.*
 import com.epam.drill.transport.net.*
@@ -19,32 +20,30 @@ import kotlin.time.*
 val ws = AtomicReference(Channel<ByteArray>().freeze()).freeze()
 
 class WebsocketQueueTest : TestBase() {
-    @Ignore
+
     @Test
-    fun shouldProcessBigMessage() = runTest(1.minutes) {
+    fun shouldProcessBigMessage() = runTest(2.minutes) {
         val (serverFD, port) = startServer()
-        val veryBigMessage = StringBuilder().apply { repeat(MESSAGE_SIZE) { append(".") } }.toString()
+        Logging.logLevel = LogLevel.TRACE
         val wsClient = RWebsocketClient("ws://localhost:$port")
-        wsClient.onStringMessage.add { stringMessage ->
-            assertEquals(veryBigMessage.length, stringMessage.length)
+        delay(2000)
+        wsClient.onBinaryMessage.add { stringMessage ->
+            println(stringMessage.size)
             (wsClient as? RawSocketWebSocketClient)?.client?.sendWsFrame(WsFrame(byteArrayOf(), WsOpcode.Close))
         }
         wsClient.onClose.add {
             wsClient.close()
             close(serverFD.toULong())
         }
-        wsClient.send(veryBigMessage.apply {
-            val mb: Float = this.encodeToByteArray().size / 1024f / 1024f
-            println("$mb megabyte")
-        })
-
+        Worker.start(true).execute(TransferMode.UNSAFE, { wsClient }) {
+            it.blockingSend(ByteArray(Int.MAX_VALUE - 100))
+        }
     }
 
     @Ignore
     @Test
     fun shouldProcessMultipleMessages() = runTest(5.minutes) {
         val messageForSend = "any"
-        logConfig
         val (_, port) = startServer()
         val currentMessageIndex = atomic(1)
         val wsClient = RWebsocketClient(
