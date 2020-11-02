@@ -8,8 +8,25 @@ import platform.posix.*
 
 class NativeSocketClient(sockfd: KX_SOCKET) : NativeSocket(sockfd) {
     companion object {
-        operator fun invoke(): NativeSocketClient {
-            val socket = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP)
+        operator fun invoke(networkAddress: NetworkAddress): NativeSocketClient {
+            var socket = 0
+            val resolve = networkAddress.resolve()
+            for (remote in resolve) {
+                try {
+                    remote.nativeAddress { address, size ->
+                        socket = socket(remote.family.convert(), SOCK_STREAM, 0)
+                        if (socket < 0) {
+                            checkErrors("socket")
+                        }
+                        val connect = connect(socket, address, size)
+                        if (connect != 0) {
+                            checkErrors("connect")
+                        }
+                    }
+                } catch (x: Throwable) {
+                }
+
+            }
             return NativeSocketClient(socket)
         }
     }
@@ -21,22 +38,10 @@ class NativeSocketClient(sockfd: KX_SOCKET) : NativeSocket(sockfd) {
     }
 
     @Suppress("RemoveRedundantCallsOfConversionMethods")
-    fun connect(host: String, port: Int) {
+    fun connect() {
         memScoped {
-            @Suppress("UNCHECKED_CAST")
-            val inetaddr = resolveAddress(host, port) as CValuesRef<sockaddr>
-            checkErrors("getaddrinfo")
-
-            @Suppress("RemoveRedundantCallsOfConversionMethods") val connected =
-                connect(sockfd, inetaddr, sockaddr_in.size.convert())
-            checkErrors("connect to ${host}:${port}")
             setNonBlocking()
-            if (connected != 0) {
-                _connected.value = false
-                throw ConnectException()
-            } else {
-                _connected.value = true
-            }
+            _connected.value = true
         }
     }
 }

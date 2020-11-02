@@ -22,6 +22,13 @@ val ws = AtomicReference(Channel<ByteArray>().freeze()).freeze()
 class WebsocketQueueTest : TestBase() {
 
     @Test
+    fun x()= runBlocking<Unit>{
+        AsyncClient("35.202.137.112", 8090, secure = false)
+        checkErrors("getaddrinfo")
+    }
+
+
+    @Test
     fun shouldProcessBigMessage() = runTest(2.minutes) {
         val (serverFD, port) = startServer()
         Logging.logLevel = LogLevel.TRACE
