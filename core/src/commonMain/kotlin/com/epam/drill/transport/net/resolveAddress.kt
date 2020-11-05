@@ -4,6 +4,8 @@ import com.epam.drill.transport.exception.*
 
 expect fun resolveAddress(host: String, port: Int): Any
 
+expect fun getAddressInfoAndConnect(host: String, port: Int): Any
+
 expect fun getAvailableBytes(sockRaw: ULong): Int
 
 expect fun close(sockRaw: ULong)

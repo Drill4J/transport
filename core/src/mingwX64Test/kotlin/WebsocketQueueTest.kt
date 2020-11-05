@@ -21,6 +21,10 @@ val ws = AtomicReference(Channel<ByteArray>().freeze()).freeze()
 
 class WebsocketQueueTest : TestBase() {
 
+//    TODO union macos & mingw tests
+
+//    TODO when invoke "getaddrinfo" get error id = 10093, description = "Successful WSAStartup not yet performed.
+//    TODO check on macosX64Test, this test is passed?
     @Test
     fun shouldCreateSocketAndConnect()= runBlocking {
         Logging.logLevel = LogLevel.TRACE

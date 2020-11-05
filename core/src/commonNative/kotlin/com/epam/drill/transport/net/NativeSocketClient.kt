@@ -1,16 +1,32 @@
 package com.epam.drill.transport.net
 
-import com.epam.drill.transport.exception.*
+import com.epam.drill.logger.Logging
 import io.ktor.utils.io.internal.utils.*
 import kotlinx.atomicfu.*
 import kotlinx.cinterop.*
-import platform.posix.*
+import kotlin.native.concurrent.SharedImmutable
 
+@SharedImmutable
+private val logger = Logging.logger("NativeSocketClient")
+
+
+/*
+    List<addrinfo> listAddr = getaddrinfo(host=argv[1], DEFAULT_PORT, &hints, &result); //done
+    for(addrinfo addrInfo : listAddr) {
+        if(connect.isGood){
+            break;
+        }
+    }
+    //freeaddrinfo
+
+ */
 class NativeSocketClient(sockfd: KX_SOCKET) : NativeSocket(sockfd) {
     companion object {
-        operator fun invoke(): NativeSocketClient {
-            val socket = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP)
-            return NativeSocketClient(socket)
+        operator fun invoke(networkAddress: NetworkAddress): NativeSocketClient {
+            logger.debug { "invoke NativeSocketClient" }
+            val socket = networkAddress.resolve()
+            logger.debug { "resolve $socket" }
+            return NativeSocketClient(socket.convert())
         }
     }
 
@@ -21,22 +37,10 @@ class NativeSocketClient(sockfd: KX_SOCKET) : NativeSocket(sockfd) {
     }
 
     @Suppress("RemoveRedundantCallsOfConversionMethods")
-    fun connect(host: String, port: Int) {
+    fun connect() {
         memScoped {
-            @Suppress("UNCHECKED_CAST")
-            val inetaddr = resolveAddress(host, port) as CValuesRef<sockaddr>
-            checkErrors("getaddrinfo")
-
-            @Suppress("RemoveRedundantCallsOfConversionMethods") val connected =
-                connect(sockfd, inetaddr, sockaddr_in.size.convert())
-            checkErrors("connect to ${host}:${port}")
+            logger.debug { "connect NativeSocketClient " }
             setNonBlocking()
-            if (connected != 0) {
-                _connected.value = false
-                throw ConnectException()
-            } else {
-                _connected.value = true
-            }
         }
     }
 }

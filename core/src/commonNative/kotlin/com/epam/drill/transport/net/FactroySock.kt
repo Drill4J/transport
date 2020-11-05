@@ -9,8 +9,8 @@ object NativeAsyncSocketFactory : AsyncSocketFactory() {
             socket.disconnect()
         }
 
-        override suspend fun connect(host: String, port: Int) {
-            socket.connect(host, port)
+        override suspend fun connect() {
+            socket.connect()
         }
 
         override val connected: Boolean get() = socket.isAlive()
@@ -29,9 +29,9 @@ object NativeAsyncSocketFactory : AsyncSocketFactory() {
     }
 
 
-    override suspend fun createClient(secure: Boolean): NativeAsyncClient {
+    override suspend fun createClient(networkAddress: NetworkAddress, secure: Boolean): NativeAsyncClient {
         return NativeAsyncClient(
-            NativeSocketClient()
+            NativeSocketClient(networkAddress= networkAddress)
         )
     }
 
